@@ -1,4 +1,4 @@
-import dash
+import dash, dash_table
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
@@ -79,16 +79,26 @@ mock_graphs = dbc.Container(
         ),
 
         dbc.Row([
+            dbc.Col(
+                dcc.Dropdown(id="dynamic_drop",
+                    options=[{"label":i, "value":i} for i in set(gapm.continent)],
+                    multi=True,
+                    placeholder="Select continents"
+                ),
+                width=3
+            )
+        ], no_gutters = False, justify="end"),
+
+        dbc.Row([
             dbc.Col(html.Div([
-                dcc.Graph(
+                dcc.Graph(id="plot1",
                     figure = px.scatter(gapm, x="gdpPercap", y="lifeExp", size="pop", color="continent",
-                                        hover_name="country", log_x=True, animation_frame="year", animation_group="country",
+                                        hover_name="country", log_x=True, size_max=85, 
+                                        animation_frame="year", animation_group="country",
                                         range_x=[np.min(gapm.gdpPercap)-100, np.max(gapm.gdpPercap)+100],
-                                        range_y=[np.min(gapm.lifeExp)-1, np.max(gapm.lifeExp)+1]
+                                        range_y=[np.min(gapm.lifeExp)-5, np.max(gapm.lifeExp)+5]
                                         )
-                                        .update_layout(template = "plotly_dark", height=800,
-                                                       transition = {'duration': 5000}
-                                                      )
+                                        .update_layout(template = "plotly_dark", height=800, transition_duration=3000)
                 )
             ]), width=12)
         ])
@@ -102,6 +112,27 @@ app.layout = html.Div([
     dcc.Location(id="url", refresh=False),
     html.Div(id="page-content")
 ])
+
+@app.callback(dash.dependencies.Output("plot1", "figure"),
+             [dash.dependencies.Input("dynamic_drop", "value")])
+
+def toggling_figure(conts):
+    if  conts is None or len(conts)==0:
+        temp_table = gapm
+    else:
+        temp_table = gapm.query("continent in @conts")
+
+    cont_figure = px.scatter(temp_table, x="gdpPercap", y="lifeExp", size="pop", color="continent",
+                            hover_name="country", log_x=True, size_max=85, 
+                            animation_frame="year", animation_group="country",
+                            range_x=[np.min(gapm.gdpPercap)-100, np.max(gapm.gdpPercap)+100],
+                            range_y=[np.min(gapm.lifeExp)-5, np.max(gapm.lifeExp)+5]
+                            ).update_layout(template = "plotly_dark", height=800, transition_duration=3000, transition={"easing":"linear"})
+    cont_figure.layout.updatemenus[0].buttons[0].args[1]['frame']['duration'] = 800
+    cont_figure.layout.updatemenus[0].buttons[0].args[1]['frame']['redraw'] = False
+    cont_figure.layout.updatemenus[0].buttons[0].args[1]['mode'] = "immediate"
+
+    return cont_figure
 
 @app.callback(dash.dependencies.Output("page-content", "children"),
               [dash.dependencies.Input("url", "pathname")]
