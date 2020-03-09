@@ -5,6 +5,7 @@ import dash_html_components as html
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 #app = dash.Dash(__name__, external_stylesheets=[dbc.themes.GRID])
@@ -83,7 +84,8 @@ mock_graphs = dbc.Container(
                 dcc.Dropdown(id="dynamic_drop",
                     options=[{"label":i, "value":i} for i in set(gapm.continent)],
                     multi=True,
-                    placeholder="Select continents"
+                    placeholder="Select continents",
+                    value="Asia"
                 ),
                 width=3
             )
@@ -91,14 +93,7 @@ mock_graphs = dbc.Container(
 
         dbc.Row([
             dbc.Col(html.Div([
-                dcc.Graph(id="plot1",
-                    figure = px.scatter(gapm, x="gdpPercap", y="lifeExp", size="pop", color="continent",
-                                        hover_name="country", log_x=True, size_max=85, 
-                                        animation_frame="year", animation_group="country",
-                                        range_x=[np.min(gapm.gdpPercap)-100, np.max(gapm.gdpPercap)+100],
-                                        range_y=[np.min(gapm.lifeExp)-5, np.max(gapm.lifeExp)+5]
-                                        )
-                                        .update_layout(template = "plotly_dark", height=800, transition_duration=3000)
+                dcc.Graph(id="plot1"
                 )
             ]), width=12)
         ])
@@ -122,12 +117,31 @@ def toggling_figure(conts):
     else:
         temp_table = gapm.query("continent in @conts")
 
+# colorsIdx = {'Moderately Low': 'blue', 'Moderate': 'green', 'Moderately High': 'orange'}
+
+# fig = px.scatter(data, x="1_Yr_Return", y="Expense_Ratio", 
+#                  color='Risk', color_discrete_map=colorsIdx)
+
     cont_figure = px.scatter(temp_table, x="gdpPercap", y="lifeExp", size="pop", color="continent",
                             hover_name="country", log_x=True, size_max=85, 
                             animation_frame="year", animation_group="country",
                             range_x=[np.min(gapm.gdpPercap)-100, np.max(gapm.gdpPercap)+100],
                             range_y=[np.min(gapm.lifeExp)-5, np.max(gapm.lifeExp)+5]
-                            ).update_layout(template = "plotly_dark", height=800, transition_duration=3000, transition={"easing":"linear"})
+                            ).add_trace(
+                                go.Scatter(x=temp_table.gdpPercap, y=temp_table.lifeExp,
+                                           name="newish",
+                                           mode="markers", marker=dict(size=temp_table["pop"]/10000000))
+                            ).update_layout(template = "plotly_dark", height=800, 
+                                            transition_duration=3000, transition={"easing":"linear"},
+                                            title={"text":"GDP vs Life Expectancy across continents",
+                                                    "x":0.5, "xanchor":"center"},
+                                            xaxis = {"title":"GDP per Capita"}, 
+                                            yaxis = {"title":"Life Expectancy\n(Years)"},
+                                            showlegend = True
+                            )
+                                            
+
+
     cont_figure.layout.updatemenus[0].buttons[0].args[1]['frame']['duration'] = 800
     cont_figure.layout.updatemenus[0].buttons[0].args[1]['frame']['redraw'] = False
     cont_figure.layout.updatemenus[0].buttons[0].args[1]['mode'] = "immediate"
