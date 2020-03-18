@@ -21,18 +21,39 @@ app.config["suppress_callback_exceptions"] = True
 # APP LAYOUT
 card1 = dbc.Card([
     dbc.CardHeader("Card portion with options"),
+
     dbc.CardBody(["Choose the year",
-    dcc.Dropdown(
-        id="years",
-        options=[{"label":i, "value":i} for i in gapm.year],
-        value=2002,
-        multi=True
-    )])
+                  dcc.Dropdown(
+                    id="years",
+                    options=[{"label":i, "value":i} for i in set(gapm.year)],
+                    value=2002,
+                    multi=True
+                  )
+    ]),
+
+    dbc.CardBody(["Choose a continent",
+                  dcc.Dropdown(
+                      id="continents",
+                      options = [{"label":i, "value":i} for i in set(gapm.continent)],
+                      value="Asia",
+                      multi=True
+                  )
+    ]),
+
+    dbc.CardBody(["Choose a GDP range",
+                  dcc.RangeSlider(
+                      id="gdps",
+                      min=np.min(gapm.gdpPercap),
+                      max=np.max(gapm.gdpPercap),
+                      value=[np.min(gapm.gdpPercap), np.max(gapm.gdpPercap)]
+                  )
+    ])
+
 ],className="pretty_container"
 )
 
 card2 = dbc.Card([
-    dbc.CardHeader("Second on the right"),
+    dbc.CardHeader(html.H4("Second on the right")),
     dbc.CardBody(
         dcc.Graph(id="plot1")
     )
@@ -41,15 +62,26 @@ className="pretty_container", color="dark", inverse=True
 )
 
 @app.callback(Output("plot1", "figure"),
-                     [Input("years", "value")])
+                     [Input("years", "value"), 
+                      Input("continents", "value")
+                      ]
+             )
 
-def plot1(year_values):
+def plot1(year_values, conts):
 
     if type(year_values) != list:
         year_values = [year_values]
 
-    conf_figure = px.scatter(gapm.query("year in @year_values"), 
-                            x="gdpPercap", y="lifeExp")
+    if type(conts) != list:
+        conts = [conts]
+
+    temp_fig = (gapm
+                .query("year in @year_values")
+                .query("continent in @conts")
+                )
+
+    conf_figure = px.scatter(temp_fig, 
+                            x="gdpPercap", y="lifeExp", color="continent")
 
     return conf_figure
 
