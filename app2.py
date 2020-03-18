@@ -2,6 +2,7 @@ import dash, dash_table
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
+from dash.dependencies import Output, Input
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -19,20 +20,38 @@ app.config["suppress_callback_exceptions"] = True
 
 # APP LAYOUT
 card1 = dbc.Card([
-    dbc.CardHeader("The title of this"),
-    dbc.CardBody("First on the left"),
-
-    dcc.Graph(
-        figure = px.scatter(gapm, x="gdpPercap", y="lifeExp")
-    )
-
+    dbc.CardHeader("Card portion with options"),
+    dbc.CardBody(["Choose the year",
+    dcc.Dropdown(
+        id="years",
+        options=[{"label":i, "value":i} for i in gapm.year],
+        value=2002,
+        multi=True
+    )])
 ],className="pretty_container"
 )
 
-card2 = dbc.Card(
-    "Second on the right", body=True,
-    className="pretty_container", color="dark", inverse=True
+card2 = dbc.Card([
+    dbc.CardHeader("Second on the right"),
+    dbc.CardBody(
+        dcc.Graph(id="plot1")
+    )
+],
+className="pretty_container", color="dark", inverse=True
 )
+
+@app.callback(Output("plot1", "figure"),
+                     [Input("years", "value")])
+
+def plot1(year_values):
+
+    if type(year_values) != list:
+        year_values = [year_values]
+
+    conf_figure = px.scatter(gapm.query("year in @year_values"), 
+                            x="gdpPercap", y="lifeExp")
+
+    return conf_figure
 
 app.layout = html.Div([
 
